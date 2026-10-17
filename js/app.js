@@ -183,9 +183,121 @@ class SoundFX {
       console.warn("Audio chime prevented or unsupported", e);
     }
   }
+
+  playBeep(freq = 440, duration = 0.1) {
+    if (!state.user.soundEnabled) return;
+    try {
+      this.init();
+      if (!this.ctx) return;
+      if (this.ctx.state === "suspended") this.ctx.resume();
+      const now = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freq, now);
+      gain.gain.setValueAtTime(0.25, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(now);
+      osc.stop(now + duration);
+    } catch (e) {}
+  }
 }
 
 const sfx = new SoundFX();
+
+// ==========================================================================
+// Confetti Particle System (Zero-dependency Canvas Confetti)
+// ==========================================================================
+class ConfettiEngine {
+  constructor() {
+    this.canvas = document.getElementById("confettiCanvas");
+    this.ctx = this.canvas ? this.canvas.getContext("2d") : null;
+    this.particles = [];
+    this.animating = false;
+    this.resize();
+    window.addEventListener("resize", () => this.resize());
+  }
+
+  resize() {
+    if (this.canvas) {
+      this.canvas.width = window.innerWidth;
+      this.canvas.height = window.innerHeight;
+    }
+  }
+
+  burst(x = window.innerWidth / 2, y = window.innerHeight * 0.5) {
+    if (!this.canvas) {
+      this.canvas = document.getElementById("confettiCanvas");
+      if (this.canvas) this.ctx = this.canvas.getContext("2d");
+      this.resize();
+    }
+    if (!this.ctx) return;
+
+    const colors = ["#00f0ff", "#3b82f6", "#10b981", "#ff7043", "#8b5cf6", "#f43f5e", "#ffd700"];
+    const count = 100;
+
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 4 + Math.random() * 9;
+      this.particles.push({
+        x: x,
+        y: y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 5,
+        size: 5 + Math.random() * 6,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        rotation: Math.random() * 360,
+        rotationSpeed: (Math.random() - 0.5) * 12,
+        life: 1,
+        decay: 0.012 + Math.random() * 0.015
+      });
+    }
+
+    if (!this.animating) {
+      this.animating = true;
+      this.animate();
+    }
+  }
+
+  animate() {
+    if (!this.ctx) return;
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+    for (let i = this.particles.length - 1; i >= 0; i--) {
+      const p = this.particles[i];
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += 0.28; // gravity
+      p.vx *= 0.98; // drag
+      p.rotation += p.rotationSpeed;
+      p.life -= p.decay;
+
+      if (p.life <= 0 || p.y > this.canvas.height + 50) {
+        this.particles.splice(i, 1);
+        continue;
+      }
+
+      this.ctx.save();
+      this.ctx.translate(p.x, p.y);
+      this.ctx.rotate((p.rotation * Math.PI) / 180);
+      this.ctx.globalAlpha = Math.max(0, p.life);
+      this.ctx.fillStyle = p.color;
+      this.ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 0.6);
+      this.ctx.restore();
+    }
+
+    if (this.particles.length > 0) {
+      requestAnimationFrame(() => this.animate());
+    } else {
+      this.animating = false;
+      this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    }
+  }
+}
+
+const confetti = new ConfettiEngine();
 
 // ==========================================================================
 // Chart Management (Chart.js wrappers)
@@ -243,6 +355,7 @@ function updateAllCharts() {
   renderCalorieChart(filtered.workouts);
   renderWorkoutDistributionChart(filtered.workouts);
   updateStatsCards();
+  updateActivityRings();
 }
 
 function renderWeightChart(weightData) {
@@ -473,6 +586,177 @@ function updateStatsCards() {
     elWeightDelta.innerHTML = `${icon} ${deltaVal >= 0 ? '+' : ''}${deltaVal} kg from start`;
   }
 }
+
+// ==========================================================================
+// Concentric Activity Rings (Apple Fitness Style)
+// ==========================================================================
+function updateActivityRings() {
+  const moveFg = document.getElementById("ringMoveFg");
+  const exerciseFg = document.getElementById("ringExerciseFg");
+  const hydrateFg = document.getElementById("ringHydrateFg");
+
+  const moveValEl = document.getElementById("ringMoveValue");
+  const exerciseValEl = document.getElementById("ringExerciseValue");
+  const hydrateValEl = document.getElementById("ringHydrateValue");
+  const centerScoreEl = document.getElementById("ringsCenterScore");
+  const overallEl = document.getElementById("ringsOverallPercent");
+
+  if (!moveFg || !exerciseFg || !hydrateFg) return;
+
+  // Use latest workout metrics or fallback
+  const lastWorkout = state.workouts.length ? state.workouts[state.workouts.length - 1] : { calories: 1200, duration: 45 };
+  const todayCalories = lastWorkout.calories || 1200;
+  const todayMinutes = lastWorkout.duration || 45;
+  const todayWater = state.waterCount * 250;
+
+  const moveGoal = 1500;
+  const exerciseGoal = 45;
+  const waterGoal = 2000;
+
+  const movePct = Math.min(todayCalories / moveGoal, 1);
+  const exercisePct = Math.min(todayMinutes / exerciseGoal, 1);
+  const waterPct = Math.min(todayWater / waterGoal, 1);
+
+  // Circumferences: Outer=565.48, Middle=439.82, Inner=314.15
+  moveFg.style.strokeDashoffset = (565.48 * (1 - movePct)).toString();
+  exerciseFg.style.strokeDashoffset = (439.82 * (1 - exercisePct)).toString();
+  hydrateFg.style.strokeDashoffset = (314.15 * (1 - waterPct)).toString();
+
+  if (moveValEl) moveValEl.textContent = todayCalories.toLocaleString();
+  if (exerciseValEl) exerciseValEl.textContent = todayMinutes;
+  if (hydrateValEl) hydrateValEl.textContent = todayWater.toLocaleString();
+
+  let completedRings = 0;
+  if (movePct >= 1) completedRings++;
+  if (exercisePct >= 1) completedRings++;
+  if (waterPct >= 1) completedRings++;
+
+  if (centerScoreEl) centerScoreEl.textContent = `${completedRings}/3`;
+  const avgPct = Math.round(((movePct + exercisePct + waterPct) / 3) * 100);
+  if (overallEl) overallEl.textContent = `${avgPct}% COMPLETE`;
+}
+
+// ==========================================================================
+// Gym Rest & Interval Countdown Timer
+// ==========================================================================
+class GymRestTimer {
+  constructor() {
+    this.totalDuration = 60;
+    this.timeLeft = 60;
+    this.intervalId = null;
+    this.isRunning = false;
+    this.circumference = 534.07;
+  }
+
+  init() {
+    this.fgCircle = document.getElementById("timerFgCircle");
+    this.timeText = document.getElementById("timerTimeText");
+    this.labelText = document.getElementById("timerLabelText");
+
+    const startBtn = document.getElementById("timerStartBtn");
+    const pauseBtn = document.getElementById("timerPauseBtn");
+    const resetBtn = document.getElementById("timerResetBtn");
+
+    if (startBtn) startBtn.addEventListener("click", () => this.start());
+    if (pauseBtn) pauseBtn.addEventListener("click", () => this.pause());
+    if (resetBtn) resetBtn.addEventListener("click", () => this.reset());
+
+    document.querySelectorAll(".timer-preset-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".timer-preset-btn").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        this.setDuration(parseInt(btn.dataset.time, 10));
+      });
+    });
+
+    this.updateDisplay();
+  }
+
+  setDuration(seconds) {
+    this.pause();
+    this.totalDuration = seconds;
+    this.timeLeft = seconds;
+    this.updateDisplay();
+  }
+
+  start() {
+    if (this.isRunning) return;
+    this.isRunning = true;
+    sfx.playBeep(580, 0.08);
+
+    if (this.labelText) this.labelText.textContent = "RESTING...";
+
+    this.intervalId = setInterval(() => {
+      if (this.timeLeft > 0) {
+        this.timeLeft--;
+        this.updateDisplay();
+
+        // Audio countdown for final 3 seconds
+        if (this.timeLeft === 3 || this.timeLeft === 2 || this.timeLeft === 1) {
+          sfx.playBeep(750, 0.12);
+        }
+
+        if (this.timeLeft === 0) {
+          this.complete();
+        }
+      }
+    }, 1000);
+  }
+
+  pause() {
+    if (!this.isRunning) return;
+    this.isRunning = false;
+    clearInterval(this.intervalId);
+    if (this.labelText) this.labelText.textContent = "PAUSED";
+  }
+
+  reset() {
+    this.pause();
+    this.timeLeft = this.totalDuration;
+    if (this.labelText) this.labelText.textContent = "REST TIMER";
+    this.updateDisplay();
+  }
+
+  complete() {
+    this.pause();
+    if (this.labelText) this.labelText.textContent = "SET READY! 🔥";
+    sfx.playChime();
+    confetti.burst(window.innerWidth / 2, window.innerHeight * 0.5);
+    showToast("Rest time complete! Ready for next set! 💪");
+  }
+
+  updateDisplay() {
+    this.fgCircle = document.getElementById("timerFgCircle");
+    this.timeText = document.getElementById("timerTimeText");
+    if (!this.timeText || !this.fgCircle) return;
+
+    const mins = Math.floor(this.timeLeft / 60);
+    const secs = this.timeLeft % 60;
+    this.timeText.textContent = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+
+    const fraction = this.timeLeft / this.totalDuration;
+    const offset = this.circumference * (1 - fraction);
+    this.fgCircle.style.strokeDashoffset = offset.toString();
+
+    if (this.timeLeft <= 5 && this.timeLeft > 0) {
+      this.fgCircle.classList.add("warning");
+      this.timeText.parentElement?.classList.add("timer-pulse");
+    } else {
+      this.fgCircle.classList.remove("warning");
+      this.timeText.parentElement?.classList.remove("timer-pulse");
+    }
+  }
+}
+
+const restTimer = new GymRestTimer();
+
+window.switchToToolsTimer = function() {
+  const navItem = document.querySelector('[data-nav-view="toolsView"]');
+  if (navItem) navItem.click();
+  setTimeout(() => {
+    document.getElementById("restTimerCard")?.scrollIntoView({ behavior: "smooth" });
+  }, 150);
+};
 
 // ==========================================================================
 // Motivational Quote Banner
@@ -802,7 +1086,13 @@ function renderWaterGlasses() {
       state.waterCount = i + 1;
       state.saveWater();
       renderWaterGlasses();
+      updateActivityRings();
       sfx.playChime();
+
+      if (state.waterCount >= 8) {
+        confetti.burst();
+        showToast("🎉 Daily 2,000ml Hydration Goal Achieved!");
+      }
     };
     container.appendChild(glass);
   }
@@ -810,6 +1100,7 @@ function renderWaterGlasses() {
   if (countEl) {
     countEl.textContent = `${state.waterCount * 250} ml / 2,000 ml`;
   }
+  updateActivityRings();
 }
 
 // ==========================================================================
@@ -996,6 +1287,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       sfx.playChime();
+      confetti.burst(window.innerWidth / 2, window.innerHeight * 0.5);
       showToast("Workout and weight logged successfully! 🔥");
 
       // Refresh UI
@@ -1094,8 +1386,10 @@ document.addEventListener("DOMContentLoaded", () => {
   // 11. Fitness Tools & User Profile
   setupFitnessTools();
   setupUserSettings();
+  restTimer.init();
 
-  // 12. Initialize Charts & Tables
+  // 12. Initialize Charts, Rings & Tables
   initCharts();
   renderHistoryTable();
+  updateActivityRings();
 });

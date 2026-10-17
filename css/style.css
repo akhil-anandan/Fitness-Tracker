@@ -1352,3 +1352,243 @@ body::after {
     border-radius: var(--radius-lg);
   }
 }
+
+/* ==========================================================================
+   Visual Excellence Suite: Activity Rings, Rest Timer & Confetti
+   ========================================================================== */
+
+/* Confetti Canvas */
+#confettiCanvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 999999;
+}
+
+/* Concentric Activity Rings */
+.activity-rings-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.rings-visual-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  width: 220px;
+  height: 220px;
+  margin: 0 auto;
+}
+
+.rings-svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.ring-bg {
+  fill: none;
+  stroke-width: 12;
+  opacity: 0.18;
+}
+
+.ring-fg {
+  fill: none;
+  stroke-width: 12;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ring-move-bg { stroke: #ff7043; }
+.ring-move-fg { stroke: #ff7043; filter: drop-shadow(0 0 8px rgba(255, 112, 67, 0.6)); }
+
+.ring-exercise-bg { stroke: #00f0ff; }
+.ring-exercise-fg { stroke: #00f0ff; filter: drop-shadow(0 0 8px rgba(0, 240, 255, 0.6)); }
+
+.ring-hydrate-bg { stroke: #3b82f6; }
+.ring-hydrate-fg { stroke: #3b82f6; filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.6)); }
+
+.rings-center-metric {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.rings-center-val {
+  font-family: var(--font-mono);
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #fff;
+}
+
+.rings-center-lbl {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  letter-spacing: 1px;
+}
+
+.rings-legend {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+}
+
+.ring-legend-item {
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 0.75rem 0.5rem;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.ring-legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 4px;
+}
+
+.ring-legend-label {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ring-legend-value {
+  font-family: var(--font-mono);
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.ring-legend-goal {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+}
+
+/* Gym Rest & Interval Timer */
+.rest-timer-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1rem 0;
+}
+
+.timer-circle-wrap {
+  position: relative;
+  width: 200px;
+  height: 200px;
+  margin-bottom: 1.25rem;
+}
+
+.timer-svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.timer-bg-circle {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.08);
+  stroke-width: 8;
+}
+
+.timer-fg-circle {
+  fill: none;
+  stroke: var(--accent-cyan);
+  stroke-width: 8;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.25s linear;
+  filter: drop-shadow(0 0 10px rgba(0, 240, 255, 0.5));
+}
+
+.timer-fg-circle.warning {
+  stroke: var(--accent-orange);
+  filter: drop-shadow(0 0 12px rgba(255, 112, 67, 0.7));
+}
+
+.timer-display {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.timer-time {
+  font-family: var(--font-mono);
+  font-size: 2.8rem;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1;
+}
+
+.timer-label {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin-top: 0.4rem;
+}
+
+.timer-pulse {
+  animation: timerPulseAnim 0.8s ease-in-out infinite alternate;
+}
+
+@keyframes timerPulseAnim {
+  0% { transform: scale(1); }
+  100% { transform: scale(1.05); }
+}
+
+.timer-presets {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-bottom: 1.25rem;
+}
+
+.timer-preset-btn {
+  background: var(--surface-glass);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  padding: 0.4rem 0.8rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.timer-preset-btn:hover,
+.timer-preset-btn.active {
+  background: rgba(0, 240, 255, 0.15);
+  color: #fff;
+  border-color: var(--accent-cyan);
+}
+
+.timer-actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
