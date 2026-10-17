@@ -61,11 +61,11 @@ This repository already includes `.github/workflows/deploy.yml` configured for a
    git push origin main
    ```
 2. **Enable GitHub Pages on your repository**:
-   - Go to your repository on GitHub: `https://github.com/akhil-anandan/fitness`
+   - Go to your repository on GitHub: `https://github.com/akhil-anandan/Fitness-Tracker`
    - Navigate to **Settings** > **Pages**
-   - Under **Build and deployment** > **Source**, choose **GitHub Actions** (or `Deploy from a branch` -> `main` / root).
+   - Under **Build and deployment** > **Source**, choose **GitHub Actions** (or select `Deploy from a branch` with branch `main` and `/ (root)`).
    - Your site will be published at:
-     **`https://akhil-anandan.github.io/fitness/`**
+     **`https://akhil-anandan.github.io/Fitness-Tracker/`**
 
 ---
 
