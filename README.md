@@ -23,7 +23,6 @@ A modern, responsive, cyber-glassmorphic fitness and weight tracking web applica
   - Searchable workout history table.
   - **Export to CSV**: Download `workouts.csv` and `weights.csv` anytime.
   - **Import CSV**: Upload existing workout or weight CSV files with auto-detection.
-  - **Reload Demo Data**: Instantly populate the app with the historical workout records from July 2025.
 - 🧮 **Bonus Fitness Tools**:
   - **Smart BMI Calculator**: Visual color-coded gauge with BMI category breakdown.
   - **Hydration Tracker**: Interactive 8-glass water tracker (2,000 ml daily goal).

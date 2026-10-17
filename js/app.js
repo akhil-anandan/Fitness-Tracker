@@ -60,34 +60,28 @@ const MET_VALUES = {
 // ==========================================================================
 // Application State & User Account Management
 // ==========================================================================
-const DEFAULT_ACCOUNT = {
-  username: "alex",
-  password: "123",
-  fullName: "Alex Walker",
-  goal: "Weight Gain",
-  subgoal: "Muscle Gain",
-  targetWeight: 65,
-  currentWeight: 60,
-  soundEnabled: true,
-  theme: "dark"
-};
-
 class AppState {
   constructor() {
-    // 1. Accounts store
+    // 1. Accounts store (multi-user accounts in localStorage)
     this.accounts = JSON.parse(localStorage.getItem("fitgraph_accounts"));
     if (!this.accounts || typeof this.accounts !== "object") {
-      this.accounts = { alex: { ...DEFAULT_ACCOUNT } };
+      this.accounts = {};
+      this.saveAccounts();
+    }
+    // Remove legacy demo account if present
+    if (this.accounts.alex && this.accounts.alex.password === "123") {
+      delete this.accounts.alex;
       this.saveAccounts();
     }
 
     // 2. Active Session
-    this.activeUsername = localStorage.getItem("fitgraph_session_user") || "alex";
-    if (!this.accounts[this.activeUsername]) {
-      this.activeUsername = "alex";
+    this.activeUsername = localStorage.getItem("fitgraph_session_user") || null;
+    if (this.activeUsername === "alex" || (this.activeUsername && !this.accounts[this.activeUsername])) {
+      this.activeUsername = null;
+      this.saveSession();
     }
 
-    this.user = this.accounts[this.activeUsername];
+    this.user = this.activeUsername ? this.accounts[this.activeUsername] : null;
     this.loadUserData(this.activeUsername);
 
     this.activeTimeRange = "7d";
@@ -107,32 +101,20 @@ class AppState {
   }
 
   loadUserData(username) {
-    if (!username) {
-      this.user = { fullName: "Guest User", username: "guest", goal: "Weight Gain", subgoal: "Muscle Gain", currentWeight: 60, targetWeight: 65, soundEnabled: true };
+    if (!username || !this.accounts[username]) {
+      this.user = { fullName: "User", username: "", goal: "Weight Gain", subgoal: "Muscle Gain", currentWeight: 60, targetWeight: 65, soundEnabled: true };
       this.workouts = [];
       this.weights = [];
       this.waterCount = 0;
       return;
     }
 
-    this.user = this.accounts[username] || { ...DEFAULT_ACCOUNT };
+    this.user = this.accounts[username];
     const savedWorkouts = localStorage.getItem(`fitgraph_workouts_${username}`);
     const savedWeights = localStorage.getItem(`fitgraph_weights_${username}`);
 
-    if (savedWorkouts) {
-      this.workouts = JSON.parse(savedWorkouts);
-    } else {
-      this.workouts = username === "alex" ? [...DEFAULT_WORKOUTS] : [];
-      this.saveWorkouts();
-    }
-
-    if (savedWeights) {
-      this.weights = JSON.parse(savedWeights);
-    } else {
-      this.weights = username === "alex" ? [...DEFAULT_WEIGHTS] : [{ id: `wt-${Date.now()}`, date: new Date().toISOString().split('T')[0], weight: this.user.currentWeight }];
-      this.saveWeights();
-    }
-
+    this.workouts = savedWorkouts ? JSON.parse(savedWorkouts) : [];
+    this.weights = savedWeights ? JSON.parse(savedWeights) : (this.user && this.user.currentWeight ? [{ id: `wt-${Date.now()}`, date: new Date().toISOString().split('T')[0], weight: this.user.currentWeight }] : []);
     this.waterCount = parseInt(localStorage.getItem(`fitgraph_water_${username}`) || "0", 10);
   }
 
@@ -233,13 +215,8 @@ class AppState {
   }
 
   resetToDefault() {
-    if (this.activeUsername === "alex" || !this.activeUsername) {
-      this.workouts = [...DEFAULT_WORKOUTS];
-      this.weights = [...DEFAULT_WEIGHTS];
-    } else {
-      this.workouts = [];
-      this.weights = [{ id: `wt-${Date.now()}`, date: new Date().toISOString().split('T')[0], weight: this.user.currentWeight }];
-    }
+    this.workouts = [];
+    this.weights = this.user && this.user.currentWeight ? [{ id: `wt-${Date.now()}`, date: new Date().toISOString().split('T')[0], weight: this.user.currentWeight }] : [];
     this.saveWorkouts();
     this.saveWeights();
   }
@@ -1255,28 +1232,14 @@ window.togglePasswordVisibility = function(inputId, btn) {
   }
 };
 
-window.quickDemoLogin = function() {
-  const res = state.login("alex", "123");
-  if (res.success) {
-    closeModal("authModal");
-    syncUserProfileUI();
-    updateExerciseOptions();
-    updateAllCharts();
-    renderHistoryTable();
-    sfx.playChime();
-    confetti.burst();
-    showToast(`Welcome back, ${state.user.fullName || state.user.username}! 🚀`);
-  }
-};
-
 window.handleAuthAction = function() {
   if (state.activeUsername) {
-    if (confirm(`Currently signed in as ${state.user.fullName || state.user.username}.\nDo you want to sign out or switch accounts?`)) {
+    if (confirm(`Currently signed in as ${state.user.fullName || state.user.username}.\nDo you want to sign out?`)) {
       state.logout();
       syncUserProfileUI();
       updateAllCharts();
       renderHistoryTable();
-      showToast("Signed out. Please sign in or switch user.");
+      showToast("Signed out. Please sign in or create an account.");
       openModal("authModal");
     }
   } else {
@@ -1494,26 +1457,12 @@ window.closeModal = function(modalId) {
 // Application Initialization
 // ==========================================================================
 document.addEventListener("DOMContentLoaded", () => {
-  // 1. Splash Screen Handling
-  const splash = document.getElementById("splashScreen");
-  const splashBar = document.getElementById("splashLoaderFill");
-  const skipBtn = document.getElementById("splashSkipBtn");
-
-  if (splashBar) {
-    setTimeout(() => {
-      splashBar.style.width = "100%";
-    }, 100);
-  }
-
-  const dismissSplash = () => {
-    if (splash && !splash.classList.contains("hidden")) {
-      splash.classList.add("hidden");
-    }
-  };
-
-  setTimeout(dismissSplash, 2600);
-  if (skipBtn) {
-    skipBtn.addEventListener("click", dismissSplash);
+  // 1. Session Check & Initial View Gate
+  if (state.activeUsername) {
+    closeModal("authModal");
+    syncUserProfileUI();
+  } else {
+    openModal("authModal");
   }
 
   // 2. Set Default Date to Today
@@ -1673,18 +1622,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // 10. Load Demo Data / Reset Button
-  const resetDemoBtn = document.getElementById("resetDemoBtn");
-  if (resetDemoBtn) {
-    resetDemoBtn.addEventListener("click", () => {
-      if (confirm("Reset workouts and weights back to initial demo data?")) {
-        state.resetToDefault();
-        updateAllCharts();
-        renderHistoryTable();
-        showToast("Demo data reloaded!");
-      }
-    });
-  }
+
 
   // 11. Fitness Tools, User Profile & Auth
   setupFitnessTools();

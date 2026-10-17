@@ -31,20 +31,7 @@
   <!-- Fullscreen Confetti Canvas Overlay -->
   <canvas id="confettiCanvas"></canvas>
 
-  <!-- =====================================================================
-       1. Splash / Intro Screen (Matches Streamlit original with smooth UX)
-       ===================================================================== -->
-  <div id="splashScreen" class="splash-screen">
-    <div class="splash-content">
-      <img src="logo.jpg" alt="FitGraph Logo" class="splash-logo-img">
-      <h1 class="splash-title">FITGRAPH</h1>
-      <p class="splash-subtitle">TRANSFORM YOUR FITNESS • TRACK YOUR PROGRESS</p>
-      <div class="splash-loader-bar">
-        <div id="splashLoaderFill" class="splash-loader-fill"></div>
-      </div>
-      <button id="splashSkipBtn" class="splash-skip-btn">Skip Intro ➔</button>
-    </div>
-  </div>
+
 
   <!-- =====================================================================
        2. Application Shell (Sidebar + Main Content)
@@ -100,9 +87,6 @@
       <div class="sidebar-footer">
         <button class="btn btn-secondary btn-sm" onclick="openModal('goalModal')">
           🎯 Edit Fitness Goal
-        </button>
-        <button id="resetDemoBtn" class="btn btn-outline btn-sm">
-          🔄 Reload Demo Data
         </button>
       </div>
     </aside>
@@ -640,7 +624,7 @@
   <!-- =====================================================================
        4. Modal: Authentication (Login & Signup)
        ===================================================================== -->
-  <div id="authModal" class="modal-overlay">
+  <div id="authModal" class="modal-overlay active">
     <div class="modal-dialog auth-modal-dialog">
       <div class="auth-tabs">
         <button type="button" class="auth-tab active" id="tabSignInBtn" onclick="switchAuthTab('signin')">Sign In</button>
@@ -660,7 +644,7 @@
         <form id="signInForm">
           <div class="form-group">
             <label class="form-label" for="loginUsername">Username or Email</label>
-            <input type="text" id="loginUsername" class="form-control" placeholder="e.g. alex" required>
+            <input type="text" id="loginUsername" class="form-control" placeholder="Enter your username" required>
           </div>
 
           <div class="form-group">
@@ -676,19 +660,11 @@
               <input type="checkbox" id="loginRememberMe" checked>
               <span>Remember Me</span>
             </label>
-            <a href="javascript:void(0)" onclick="quickDemoLogin()" style="color: var(--accent-cyan); text-decoration: none;">Try Demo User</a>
+            <span style="color: var(--text-muted); font-size: 0.82rem;">New here? <a href="javascript:void(0)" onclick="switchAuthTab('signup')" style="color: var(--accent-cyan); text-decoration: none; font-weight: 600;">Create Account</a></span>
           </div>
 
-          <button type="submit" class="btn btn-primary" style="width: 100%; padding: 0.85rem;">
+          <button type="submit" class="btn btn-primary" style="width: 100%; padding: 0.85rem; font-size: 0.95rem; font-weight: 700;">
             Sign In ➔
-          </button>
-
-          <div class="auth-demo-divider">
-            <span>OR QUICK START</span>
-          </div>
-
-          <button type="button" class="btn btn-demo-login" onclick="quickDemoLogin()">
-            ⚡ Instant Demo Login (Alex Walker)
           </button>
         </form>
 
@@ -709,7 +685,7 @@
             <div class="form-group">
               <label class="form-label" for="signupPassword">Password</label>
               <div class="password-input-wrapper">
-                <input type="password" id="signupPassword" class="form-control" placeholder="Min 4 chars" required>
+                <input type="password" id="signupPassword" class="form-control" placeholder="Min 3 chars" required>
                 <button type="button" class="password-toggle-btn" onclick="togglePasswordVisibility('signupPassword', this)">👁️</button>
               </div>
             </div>
@@ -748,9 +724,13 @@
             </div>
           </div>
 
-          <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 0.75rem; padding: 0.85rem;">
+          <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 0.75rem; padding: 0.85rem; font-size: 0.95rem; font-weight: 700;">
             Create Account & Launch 🚀
           </button>
+
+          <div style="text-align: center; margin-top: 1rem; font-size: 0.82rem; color: var(--text-secondary);">
+            Already have an account? <a href="javascript:void(0)" onclick="switchAuthTab('signin')" style="color: var(--accent-cyan); text-decoration: none; font-weight: 600;">Sign In</a>
+          </div>
         </form>
 
       </div>
