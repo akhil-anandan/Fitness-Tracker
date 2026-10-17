@@ -64,13 +64,15 @@
       </div>
 
       <!-- User Profile Badge -->
-      <div class="user-profile-badge" onclick="openModal('goalModal')" style="cursor: pointer;" title="Click to customize profile & goals">
-        <div id="userAvatarDisplay" class="user-avatar">A</div>
-        <div class="user-info">
+      <div class="user-profile-badge">
+        <div id="userAvatarDisplay" class="user-avatar" onclick="openModal('goalModal')" style="cursor: pointer;" title="Edit Goals">A</div>
+        <div class="user-info" onclick="openModal('goalModal')" style="cursor: pointer;" title="Edit Goals">
           <div id="userNameDisplay" class="user-name-display">Alex Walker</div>
           <div id="userGoalDisplay" class="user-goal-pill">Weight Gain • Muscle</div>
         </div>
-        <span style="font-size: 0.8rem; color: var(--text-muted);">⚙️</span>
+        <button id="authBtnSidebar" class="btn btn-sm btn-icon" onclick="handleAuthAction()" title="Sign Out or Switch Account" style="background: transparent; border: none; color: var(--text-muted); cursor: pointer;">
+          🚪
+        </button>
       </div>
 
       <!-- Navigation Menu -->
@@ -121,13 +123,17 @@
         </div>
 
         <div class="header-actions">
+          <button id="authBtnHeader" class="btn btn-secondary btn-sm" onclick="handleAuthAction()">
+            <span>🔐</span>
+            <span id="authBtnHeaderText" class="btn-text-hide">Account</span>
+          </button>
           <button class="btn btn-secondary btn-sm" onclick="switchToToolsTimer()">
             <span>⏱️</span>
             <span class="btn-text-hide">Rest Timer</span>
           </button>
           <button class="btn btn-secondary btn-sm" onclick="openModal('goalModal')">
-            <span>👤</span>
-            <span class="btn-text-hide">Profile</span>
+            <span>⚙️</span>
+            <span class="btn-text-hide">Goals</span>
           </button>
           <button class="btn btn-primary btn-sm" onclick="window.scrollTo({top: 400, behavior: 'smooth'})">
             <span>+</span>
@@ -632,7 +638,127 @@
   </nav>
 
   <!-- =====================================================================
-       4. Modal: Profile & Goal Configuration
+       4. Modal: Authentication (Login & Signup)
+       ===================================================================== -->
+  <div id="authModal" class="modal-overlay">
+    <div class="modal-dialog auth-modal-dialog">
+      <div class="auth-tabs">
+        <button type="button" class="auth-tab active" id="tabSignInBtn" onclick="switchAuthTab('signin')">Sign In</button>
+        <button type="button" class="auth-tab" id="tabSignUpBtn" onclick="switchAuthTab('signup')">Create Account</button>
+      </div>
+
+      <div class="auth-body">
+        <div class="auth-header-brand">
+          <img src="logo.jpg" alt="FitGraph" class="auth-brand-logo">
+          <h2 id="authModalTitle" class="auth-title">Welcome to FitGraph</h2>
+          <p id="authModalSubtitle" class="auth-subtitle">Sign in to track your personal workouts and progress</p>
+        </div>
+
+        <div id="authErrorAlert" class="auth-error-alert"></div>
+
+        <!-- Sign In Form -->
+        <form id="signInForm">
+          <div class="form-group">
+            <label class="form-label" for="loginUsername">Username or Email</label>
+            <input type="text" id="loginUsername" class="form-control" placeholder="e.g. alex" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="loginPassword">Password</label>
+            <div class="password-input-wrapper">
+              <input type="password" id="loginPassword" class="form-control" placeholder="••••••••" required>
+              <button type="button" class="password-toggle-btn" onclick="togglePasswordVisibility('loginPassword', this)">👁️</button>
+            </div>
+          </div>
+
+          <div class="auth-options-row">
+            <label class="auth-checkbox-label">
+              <input type="checkbox" id="loginRememberMe" checked>
+              <span>Remember Me</span>
+            </label>
+            <a href="javascript:void(0)" onclick="quickDemoLogin()" style="color: var(--accent-cyan); text-decoration: none;">Try Demo User</a>
+          </div>
+
+          <button type="submit" class="btn btn-primary" style="width: 100%; padding: 0.85rem;">
+            Sign In ➔
+          </button>
+
+          <div class="auth-demo-divider">
+            <span>OR QUICK START</span>
+          </div>
+
+          <button type="button" class="btn btn-demo-login" onclick="quickDemoLogin()">
+            ⚡ Instant Demo Login (Alex Walker)
+          </button>
+        </form>
+
+        <!-- Sign Up Form (hidden by default) -->
+        <form id="signUpForm" style="display: none;">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="signupFullName">Full Name</label>
+              <input type="text" id="signupFullName" class="form-control" placeholder="e.g. Akhil Anandan" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="signupUsername">Username</label>
+              <input type="text" id="signupUsername" class="form-control" placeholder="e.g. akhil" required>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="signupPassword">Password</label>
+              <div class="password-input-wrapper">
+                <input type="password" id="signupPassword" class="form-control" placeholder="Min 4 chars" required>
+                <button type="button" class="password-toggle-btn" onclick="togglePasswordVisibility('signupPassword', this)">👁️</button>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="signupConfirmPassword">Confirm Password</label>
+              <input type="password" id="signupConfirmPassword" class="form-control" placeholder="Re-enter password" required>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="signupGoal">Primary Goal</label>
+              <select id="signupGoal" class="form-control">
+                <option value="Weight Gain">Weight Gain</option>
+                <option value="Weight Loss">Weight Loss</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="signupSubgoal">Focus</label>
+              <select id="signupSubgoal" class="form-control">
+                <option value="Muscle Gain">Muscle Gain</option>
+                <option value="Healthy Weight Gain">Healthy Weight Gain</option>
+                <option value="Bodybuilding">Bodybuilding</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="signupCurrentWeight">Starting Weight (kg)</label>
+              <input type="number" id="signupCurrentWeight" class="form-control" step="0.5" placeholder="e.g. 62" value="62" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="signupTargetWeight">Target Weight (kg)</label>
+              <input type="number" id="signupTargetWeight" class="form-control" step="0.5" placeholder="e.g. 68" value="68" required>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 0.75rem; padding: 0.85rem;">
+            Create Account & Launch 🚀
+          </button>
+        </form>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- =====================================================================
+       5. Modal: Profile & Goal Configuration
        ===================================================================== -->
   <div id="goalModal" class="modal-overlay">
     <div class="modal-dialog">

@@ -57,51 +57,156 @@ const MET_VALUES = {
 };
 
 // ==========================================================================
-// Application State Management
 // ==========================================================================
+// Application State & User Account Management
+// ==========================================================================
+const DEFAULT_ACCOUNT = {
+  username: "alex",
+  password: "123",
+  fullName: "Alex Walker",
+  goal: "Weight Gain",
+  subgoal: "Muscle Gain",
+  targetWeight: 65,
+  currentWeight: 60,
+  soundEnabled: true,
+  theme: "dark"
+};
+
 class AppState {
   constructor() {
-    this.user = JSON.parse(localStorage.getItem("fitgraph_user")) || {
-      username: "Alex Walker",
-      goal: "Weight Gain",
-      subgoal: "Muscle Gain",
-      targetWeight: 65,
-      currentWeight: 60,
-      soundEnabled: true,
-      theme: "dark"
-    };
-
-    this.workouts = JSON.parse(localStorage.getItem("fitgraph_workouts"));
-    if (!this.workouts || !Array.isArray(this.workouts)) {
-      this.workouts = [...DEFAULT_WORKOUTS];
-      this.saveWorkouts();
+    // 1. Accounts store
+    this.accounts = JSON.parse(localStorage.getItem("fitgraph_accounts"));
+    if (!this.accounts || typeof this.accounts !== "object") {
+      this.accounts = { alex: { ...DEFAULT_ACCOUNT } };
+      this.saveAccounts();
     }
 
-    this.weights = JSON.parse(localStorage.getItem("fitgraph_weights"));
-    if (!this.weights || !Array.isArray(this.weights)) {
-      this.weights = [...DEFAULT_WEIGHTS];
-      this.saveWeights();
+    // 2. Active Session
+    this.activeUsername = localStorage.getItem("fitgraph_session_user") || "alex";
+    if (!this.accounts[this.activeUsername]) {
+      this.activeUsername = "alex";
     }
 
-    this.waterCount = parseInt(localStorage.getItem("fitgraph_water") || "0", 10);
+    this.user = this.accounts[this.activeUsername];
+    this.loadUserData(this.activeUsername);
+
     this.activeTimeRange = "7d";
     this.currentView = "dashboard";
   }
 
+  saveAccounts() {
+    localStorage.setItem("fitgraph_accounts", JSON.stringify(this.accounts));
+  }
+
+  saveSession() {
+    if (this.activeUsername) {
+      localStorage.setItem("fitgraph_session_user", this.activeUsername);
+    } else {
+      localStorage.removeItem("fitgraph_session_user");
+    }
+  }
+
+  loadUserData(username) {
+    if (!username) {
+      this.user = { fullName: "Guest User", username: "guest", goal: "Weight Gain", subgoal: "Muscle Gain", currentWeight: 60, targetWeight: 65, soundEnabled: true };
+      this.workouts = [];
+      this.weights = [];
+      this.waterCount = 0;
+      return;
+    }
+
+    this.user = this.accounts[username] || { ...DEFAULT_ACCOUNT };
+    const savedWorkouts = localStorage.getItem(`fitgraph_workouts_${username}`);
+    const savedWeights = localStorage.getItem(`fitgraph_weights_${username}`);
+
+    if (savedWorkouts) {
+      this.workouts = JSON.parse(savedWorkouts);
+    } else {
+      this.workouts = username === "alex" ? [...DEFAULT_WORKOUTS] : [];
+      this.saveWorkouts();
+    }
+
+    if (savedWeights) {
+      this.weights = JSON.parse(savedWeights);
+    } else {
+      this.weights = username === "alex" ? [...DEFAULT_WEIGHTS] : [{ id: `wt-${Date.now()}`, date: new Date().toISOString().split('T')[0], weight: this.user.currentWeight }];
+      this.saveWeights();
+    }
+
+    this.waterCount = parseInt(localStorage.getItem(`fitgraph_water_${username}`) || "0", 10);
+  }
+
   saveUser() {
+    if (this.activeUsername && this.accounts[this.activeUsername]) {
+      this.accounts[this.activeUsername] = { ...this.user };
+      this.saveAccounts();
+    }
     localStorage.setItem("fitgraph_user", JSON.stringify(this.user));
   }
 
   saveWorkouts() {
-    localStorage.setItem("fitgraph_workouts", JSON.stringify(this.workouts));
+    if (this.activeUsername) {
+      localStorage.setItem(`fitgraph_workouts_${this.activeUsername}`, JSON.stringify(this.workouts));
+    }
   }
 
   saveWeights() {
-    localStorage.setItem("fitgraph_weights", JSON.stringify(this.weights));
+    if (this.activeUsername) {
+      localStorage.setItem(`fitgraph_weights_${this.activeUsername}`, JSON.stringify(this.weights));
+    }
   }
 
   saveWater() {
-    localStorage.setItem("fitgraph_water", this.waterCount.toString());
+    if (this.activeUsername) {
+      localStorage.setItem(`fitgraph_water_${this.activeUsername}`, this.waterCount.toString());
+    }
+  }
+
+  login(username, password) {
+    const handle = username.toLowerCase().trim();
+    const account = this.accounts[handle];
+    if (!account) {
+      return { success: false, message: "User not found. Please click 'Create Account' above." };
+    }
+    if (account.password !== password) {
+      return { success: false, message: "Incorrect password. Please try again." };
+    }
+
+    this.activeUsername = handle;
+    this.saveSession();
+    this.loadUserData(this.activeUsername);
+    return { success: true, user: this.user };
+  }
+
+  signup(accountData) {
+    const handle = accountData.username.toLowerCase().trim();
+    if (this.accounts[handle]) {
+      return { success: false, message: "Username already taken. Please choose another or Sign In." };
+    }
+
+    this.accounts[handle] = {
+      username: handle,
+      fullName: accountData.fullName.trim() || handle,
+      password: accountData.password,
+      goal: accountData.goal || "Weight Gain",
+      subgoal: accountData.subgoal || "Muscle Gain",
+      currentWeight: parseFloat(accountData.currentWeight) || 60,
+      targetWeight: parseFloat(accountData.targetWeight) || 65,
+      soundEnabled: true,
+      theme: "dark"
+    };
+
+    this.saveAccounts();
+    this.activeUsername = handle;
+    this.saveSession();
+    this.loadUserData(handle);
+    return { success: true, user: this.user };
+  }
+
+  logout() {
+    this.activeUsername = null;
+    this.saveSession();
+    this.loadUserData(null);
   }
 
   addWorkout(workout) {
@@ -110,14 +215,12 @@ class AppState {
   }
 
   addWeight(weightRecord) {
-    // If an entry for the same date exists, update it, else push
     const existingIndex = this.weights.findIndex(w => w.date === weightRecord.date);
     if (existingIndex >= 0) {
       this.weights[existingIndex].weight = weightRecord.weight;
     } else {
       this.weights.push(weightRecord);
     }
-    // Sort chronologically
     this.weights.sort((a, b) => new Date(a.date) - new Date(b.date));
     this.user.currentWeight = weightRecord.weight;
     this.saveUser();
@@ -130,8 +233,13 @@ class AppState {
   }
 
   resetToDefault() {
-    this.workouts = [...DEFAULT_WORKOUTS];
-    this.weights = [...DEFAULT_WEIGHTS];
+    if (this.activeUsername === "alex" || !this.activeUsername) {
+      this.workouts = [...DEFAULT_WORKOUTS];
+      this.weights = [...DEFAULT_WEIGHTS];
+    } else {
+      this.workouts = [];
+      this.weights = [{ id: `wt-${Date.now()}`, date: new Date().toISOString().split('T')[0], weight: this.user.currentWeight }];
+    }
     this.saveWorkouts();
     this.saveWeights();
   }
@@ -1104,17 +1212,215 @@ function renderWaterGlasses() {
 }
 
 // ==========================================================================
-// Goal & User Settings Modal
+// Authentication UI Handlers
 // ==========================================================================
-function setupUserSettings() {
-  // Sync Profile info to UI
+window.switchAuthTab = function(tab) {
+  const signInBtn = document.getElementById("tabSignInBtn");
+  const signUpBtn = document.getElementById("tabSignUpBtn");
+  const signInForm = document.getElementById("signInForm");
+  const signUpForm = document.getElementById("signUpForm");
+  const title = document.getElementById("authModalTitle");
+  const subtitle = document.getElementById("authModalSubtitle");
+  const alertEl = document.getElementById("authErrorAlert");
+
+  if (alertEl) alertEl.style.display = "none";
+
+  if (tab === "signup") {
+    signInBtn?.classList.remove("active");
+    signUpBtn?.classList.add("active");
+    if (signInForm) signInForm.style.display = "none";
+    if (signUpForm) signUpForm.style.display = "block";
+    if (title) title.textContent = "Create Your Account";
+    if (subtitle) subtitle.textContent = "Start tracking your personal fitness journey";
+  } else {
+    signUpBtn?.classList.remove("active");
+    signInBtn?.classList.add("active");
+    if (signUpForm) signUpForm.style.display = "none";
+    if (signInForm) signInForm.style.display = "block";
+    if (title) title.textContent = "Welcome to FitGraph";
+    if (subtitle) subtitle.textContent = "Sign in to track your personal workouts and progress";
+  }
+};
+
+window.togglePasswordVisibility = function(inputId, btn) {
+  const input = document.getElementById(inputId);
+  if (input) {
+    if (input.type === "password") {
+      input.type = "text";
+      btn.textContent = "🙈";
+    } else {
+      input.type = "password";
+      btn.textContent = "👁️";
+    }
+  }
+};
+
+window.quickDemoLogin = function() {
+  const res = state.login("alex", "123");
+  if (res.success) {
+    closeModal("authModal");
+    syncUserProfileUI();
+    updateExerciseOptions();
+    updateAllCharts();
+    renderHistoryTable();
+    sfx.playChime();
+    confetti.burst();
+    showToast(`Welcome back, ${state.user.fullName || state.user.username}! 🚀`);
+  }
+};
+
+window.handleAuthAction = function() {
+  if (state.activeUsername) {
+    if (confirm(`Currently signed in as ${state.user.fullName || state.user.username}.\nDo you want to sign out or switch accounts?`)) {
+      state.logout();
+      syncUserProfileUI();
+      updateAllCharts();
+      renderHistoryTable();
+      showToast("Signed out. Please sign in or switch user.");
+      openModal("authModal");
+    }
+  } else {
+    openModal("authModal");
+  }
+};
+
+function setupAuthForms() {
+  // Sign In Form
+  const signInForm = document.getElementById("signInForm");
+  const alertEl = document.getElementById("authErrorAlert");
+
+  if (signInForm) {
+    signInForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const username = document.getElementById("loginUsername")?.value || "";
+      const password = document.getElementById("loginPassword")?.value || "";
+
+      const res = state.login(username, password);
+      if (res.success) {
+        closeModal("authModal");
+        syncUserProfileUI();
+        updateExerciseOptions();
+        updateAllCharts();
+        renderHistoryTable();
+        sfx.playChime();
+        confetti.burst();
+        showToast(`Welcome back, ${state.user.fullName || state.user.username}! 🔥`);
+      } else {
+        if (alertEl) {
+          alertEl.textContent = res.message;
+          alertEl.style.display = "block";
+        }
+      }
+    });
+  }
+
+  // Sign Up Goal -> Subgoal dynamic sync
+  const signupGoal = document.getElementById("signupGoal");
+  const signupSubgoal = document.getElementById("signupSubgoal");
+
+  if (signupGoal && signupSubgoal) {
+    signupGoal.addEventListener("change", () => {
+      const isGain = signupGoal.value === "Weight Gain";
+      signupSubgoal.innerHTML = isGain
+        ? `
+          <option value="Muscle Gain">Muscle Gain</option>
+          <option value="Healthy Weight Gain">Healthy Weight Gain</option>
+          <option value="Bodybuilding">Bodybuilding</option>
+        `
+        : `
+          <option value="Fat Loss">Fat Loss</option>
+          <option value="Tone and Define">Tone and Define</option>
+          <option value="Health Reasons">Health Reasons</option>
+        `;
+    });
+  }
+
+  // Sign Up Form
+  const signUpForm = document.getElementById("signUpForm");
+  if (signUpForm) {
+    signUpForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const fullName = document.getElementById("signupFullName")?.value.trim() || "";
+      const username = document.getElementById("signupUsername")?.value.trim() || "";
+      const password = document.getElementById("signupPassword")?.value || "";
+      const confirmPassword = document.getElementById("signupConfirmPassword")?.value || "";
+      const goal = signupGoal?.value || "Weight Gain";
+      const subgoal = signupSubgoal?.value || "Muscle Gain";
+      const currentWeight = parseFloat(document.getElementById("signupCurrentWeight")?.value) || 60;
+      const targetWeight = parseFloat(document.getElementById("signupTargetWeight")?.value) || 65;
+
+      if (password !== confirmPassword) {
+        if (alertEl) {
+          alertEl.textContent = "Passwords do not match. Please re-enter.";
+          alertEl.style.display = "block";
+        }
+        return;
+      }
+
+      if (password.length < 3) {
+        if (alertEl) {
+          alertEl.textContent = "Password must be at least 3 characters long.";
+          alertEl.style.display = "block";
+        }
+        return;
+      }
+
+      const res = state.signup({
+        fullName,
+        username,
+        password,
+        goal,
+        subgoal,
+        currentWeight,
+        targetWeight
+      });
+
+      if (res.success) {
+        closeModal("authModal");
+        syncUserProfileUI();
+        updateExerciseOptions();
+        updateAllCharts();
+        renderHistoryTable();
+        sfx.playChime();
+        confetti.burst();
+        showToast(`Account created! Welcome, ${res.user.fullName}! 🚀`);
+      } else {
+        if (alertEl) {
+          alertEl.textContent = res.message;
+          alertEl.style.display = "block";
+        }
+      }
+    });
+  }
+}
+
+function syncUserProfileUI() {
   const profileName = document.getElementById("userNameDisplay");
   const profileGoal = document.getElementById("userGoalDisplay");
   const profileAvatar = document.getElementById("userAvatarDisplay");
+  const authBtnHeader = document.getElementById("authBtnHeaderText");
 
-  if (profileName) profileName.textContent = state.user.username;
+  const displayName = state.user.fullName || state.user.username;
+  if (profileName) profileName.textContent = displayName;
   if (profileGoal) profileGoal.textContent = `${state.user.goal} • ${state.user.subgoal}`;
-  if (profileAvatar) profileAvatar.textContent = state.user.username.charAt(0).toUpperCase();
+  if (profileAvatar) profileAvatar.textContent = (displayName || "U").charAt(0).toUpperCase();
+
+  if (authBtnHeader) {
+    authBtnHeader.textContent = state.activeUsername ? "Sign Out" : "Sign In";
+  }
+
+  // Pre-fill body weight in log workout form
+  const weightInput = document.getElementById("weightInput");
+  if (weightInput) {
+    weightInput.value = state.user.currentWeight || 60;
+  }
+}
+
+// ==========================================================================
+// Goal & User Settings Modal
+// ==========================================================================
+function setupUserSettings() {
+  syncUserProfileUI();
 
   // Populate goal modal inputs
   const nameInput = document.getElementById("modalUsername");
@@ -1122,7 +1428,7 @@ function setupUserSettings() {
   const subgoalSelect = document.getElementById("modalSubgoalSelect");
   const targetWeightInput = document.getElementById("modalTargetWeight");
 
-  if (nameInput) nameInput.value = state.user.username;
+  if (nameInput) nameInput.value = state.user.fullName || state.user.username;
   if (goalSelect) goalSelect.value = state.user.goal;
   if (targetWeightInput) targetWeightInput.value = state.user.targetWeight;
 
@@ -1152,16 +1458,13 @@ function setupUserSettings() {
   const saveGoalBtn = document.getElementById("saveGoalBtn");
   if (saveGoalBtn) {
     saveGoalBtn.addEventListener("click", () => {
-      state.user.username = nameInput.value.trim() || "User";
+      state.user.fullName = nameInput.value.trim() || state.user.username;
       state.user.goal = goalSelect.value;
       state.user.subgoal = subgoalSelect.value;
       state.user.targetWeight = parseFloat(targetWeightInput.value) || 65;
       state.saveUser();
 
-      if (profileName) profileName.textContent = state.user.username;
-      if (profileGoal) profileGoal.textContent = `${state.user.goal} • ${state.user.subgoal}`;
-      if (profileAvatar) profileAvatar.textContent = state.user.username.charAt(0).toUpperCase();
-
+      syncUserProfileUI();
       updateExerciseOptions();
       updateAllCharts();
       closeModal("goalModal");
@@ -1383,9 +1686,10 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // 11. Fitness Tools & User Profile
+  // 11. Fitness Tools, User Profile & Auth
   setupFitnessTools();
   setupUserSettings();
+  setupAuthForms();
   restTimer.init();
 
   // 12. Initialize Charts, Rings & Tables
