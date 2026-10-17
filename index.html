@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>FitGraph | Modern Fitness & Weight Tracker</title>
+  <meta name="description" content="FitGraph is a modern, responsive, cyber-glassmorphic fitness and weight tracking web application. Track workouts, calories, and weight progress with interactive analytics.">
+  <meta name="theme-color" content="#070b14">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="FitGraph - Smart Fitness & Weight Tracker">
+  <meta property="og:description" content="Track your gym progress, weight trends, and workout calories with a futuristic glassmorphic UI.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="logo.jpg">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/jpeg" href="logo.jpg">
+
+  <!-- Google Fonts Preconnect & Styles -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <!-- FitGraph Stylesheet -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- =====================================================================
+       1. Splash / Intro Screen (Matches Streamlit original with smooth UX)
+       ===================================================================== -->
+  <div id="splashScreen" class="splash-screen">
+    <div class="splash-content">
+      <img src="logo.jpg" alt="FitGraph Logo" class="splash-logo-img">
+      <h1 class="splash-title">FITGRAPH</h1>
+      <p class="splash-subtitle">TRANSFORM YOUR FITNESS • TRACK YOUR PROGRESS</p>
+      <div class="splash-loader-bar">
+        <div id="splashLoaderFill" class="splash-loader-fill"></div>
+      </div>
+      <button id="splashSkipBtn" class="splash-skip-btn">Skip Intro ➔</button>
+    </div>
+  </div>
+
+  <!-- =====================================================================
+       2. Application Shell (Sidebar + Main Content)
+       ===================================================================== -->
+  <div class="app-container">
+    
+    <!-- Desktop Glassmorphism Sidebar -->
+    <aside id="appSidebar" class="app-sidebar">
+      <div class="sidebar-header">
+        <div class="brand-icon-wrapper">
+          <img src="logo.jpg" alt="FitGraph">
+        </div>
+        <div class="brand-text-wrapper">
+          <div class="brand-name">FIT<span>GRAPH</span></div>
+          <div class="brand-badge">PRO TRACKER</div>
+        </div>
+      </div>
+
+      <!-- User Profile Badge -->
+      <div class="user-profile-badge" onclick="openModal('goalModal')" style="cursor: pointer;" title="Click to customize profile & goals">
+        <div id="userAvatarDisplay" class="user-avatar">A</div>
+        <div class="user-info">
+          <div id="userNameDisplay" class="user-name-display">Alex Walker</div>
+          <div id="userGoalDisplay" class="user-goal-pill">Weight Gain • Muscle</div>
+        </div>
+        <span style="font-size: 0.8rem; color: var(--text-muted);">⚙️</span>
+      </div>
+
+      <!-- Navigation Menu -->
+      <nav class="sidebar-nav">
+        <div class="nav-heading">Main Menu</div>
+        <a class="nav-link active" data-nav-view="dashboardView">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+          Dashboard & Log
+        </a>
+        <a class="nav-link" data-nav-view="analyticsView">
+          <svg viewBox="0 0 24 24" fill="none"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+          Progress Analytics
+        </a>
+        <a class="nav-link" data-nav-view="historyView">
+          <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+          Workout History
+        </a>
+        <a class="nav-link" data-nav-view="toolsView">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>
+          Fitness Tools (BMI & Water)
+        </a>
+      </nav>
+
+      <!-- Sidebar Footer -->
+      <div class="sidebar-footer">
+        <button class="btn btn-secondary btn-sm" onclick="openModal('goalModal')">
+          🎯 Edit Fitness Goal
+        </button>
+        <button id="resetDemoBtn" class="btn btn-outline btn-sm">
+          🔄 Reload Demo Data
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="app-main">
+      
+      <!-- Top Header Navigation -->
+      <header class="app-header">
+        <div class="header-left">
+          <button id="mobileMenuToggle" class="mobile-menu-toggle" aria-label="Toggle Navigation">
+            ☰
+          </button>
+          <div class="page-title">
+            <span>Fitness Dashboard</span>
+            <span class="page-title-badge">LIVE METRICS</span>
+          </div>
+        </div>
+
+        <div class="header-actions">
+          <button class="btn btn-secondary btn-sm" onclick="openModal('goalModal')">
+            <span>👤</span>
+            <span class="btn-text-hide">Profile</span>
+          </button>
+          <button class="btn btn-primary btn-sm" onclick="window.scrollTo({top: 400, behavior: 'smooth'})">
+            <span>+</span>
+            <span class="btn-text-hide">Quick Log</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Content Views -->
+      <div class="content-wrapper">
+
+        <!-- Motivational Quote Banner (Original Streamlit Quote Feature) -->
+        <section class="quote-banner">
+          <div class="quote-text-container">
+            <span class="quote-icon">💬</span>
+            <div>
+              <div id="quoteText" class="quote-text">“The pain you feel today will be the strength you feel tomorrow.”</div>
+              <div id="quoteAuthor" class="quote-author">— Arnold Schwarzenegger</div>
+            </div>
+          </div>
+          <button id="newQuoteBtn" class="btn btn-secondary btn-sm" style="white-space: nowrap;">
+            ⚡ New Quote
+          </button>
+        </section>
+
+        <!-- KPI Stats Cards Grid -->
+        <section class="stats-grid">
+          <div class="stat-card" style="--card-accent: #00f0ff;">
+            <div class="stat-header">
+              <span class="stat-title">Total Workouts</span>
+              <div class="stat-icon">🏃‍♂️</div>
+            </div>
+            <div id="statTotalWorkouts" class="stat-value">8</div>
+            <div class="stat-subtitle">Logged sessions</div>
+          </div>
+
+          <div class="stat-card" style="--card-accent: #ff7043;">
+            <div class="stat-header">
+              <span class="stat-title">Total Calories</span>
+              <div class="stat-icon">🔥</div>
+            </div>
+            <div id="statTotalCalories" class="stat-value">11,530</div>
+            <div class="stat-subtitle">Energy burned</div>
+          </div>
+
+          <div class="stat-card" style="--card-accent: #3b82f6;">
+            <div class="stat-header">
+              <span class="stat-title">Active Time</span>
+              <div class="stat-icon">⏱️</div>
+            </div>
+            <div id="statTotalTime" class="stat-value">340 m</div>
+            <div class="stat-subtitle">Total duration</div>
+          </div>
+
+          <div class="stat-card" style="--card-accent: #10b981;">
+            <div class="stat-header">
+              <span class="stat-title">Current Weight</span>
+              <div class="stat-icon">⚖️</div>
+            </div>
+            <div id="statCurrentWeight" class="stat-value">60.0 kg</div>
+            <div id="statWeightDelta" class="stat-trend-up">▲ +5.0 kg from start</div>
+          </div>
+        </section>
+
+        <!-- ===============================================================
+             VIEW 1: Dashboard View (Main Form + Graphs)
+             =============================================================== -->
+        <section id="dashboardView" class="view-section">
+          <div class="dashboard-grid">
+            
+            <!-- Left Column: Workout & Weight Logger Form -->
+            <div class="glass-card">
+              <div class="card-header">
+                <div class="card-title-group">
+                  <span class="card-title-icon">🏋️‍♂️</span>
+                  <div>
+                    <h2 class="card-title">Log Workout & Weight</h2>
+                    <p class="card-subtitle">Record your daily activity and body metrics</p>
+                  </div>
+                </div>
+              </div>
+
+              <form id="workoutForm">
+                <div class="form-row">
+                  <div class="form-group">
+                    <label class="form-label" for="workoutDateInput">Date</label>
+                    <input type="date" id="workoutDateInput" class="form-control" required>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="weightInput">Body Weight (kg)</label>
+                    <input type="number" id="weightInput" class="form-control" step="0.1" placeholder="e.g. 60.5" value="60.0">
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="exerciseSelect">Exercise Type</label>
+                  <select id="exerciseSelect" class="form-control">
+                    <!-- Populated dynamically based on user fitness goal -->
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="durationInput">Duration (Minutes)</label>
+                  <input type="number" id="durationInput" class="form-control" min="1" max="600" value="45" required>
+                  
+                  <div class="chips-group">
+                    <button type="button" class="chip-btn chip-duration" data-mins="15">+15m</button>
+                    <button type="button" class="chip-btn chip-duration" data-mins="30">+30m</button>
+                    <button type="button" class="chip-btn chip-duration active" data-mins="45">+45m</button>
+                    <button type="button" class="chip-btn chip-duration" data-mins="60">+60m</button>
+                    <button type="button" class="chip-btn chip-duration" data-mins="90">+90m</button>
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="caloriesInput">Calories Burned (kcal)</label>
+                  <input type="number" id="caloriesInput" class="form-control" min="1" placeholder="Auto-calculated estimate..." required>
+                  <div class="calorie-estimate-badge">
+                    <span>⚡ Estimated burn based on activity:</span>
+                    <span id="calorieEstimateValue" class="calorie-estimate-value">~350 kcal</span>
+                  </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem; padding: 0.85rem;">
+                  <span>💾 Log Workout & Weight</span>
+                </button>
+              </form>
+            </div>
+
+            <!-- Right Column: Interactive Weight Progression Graph -->
+            <div class="glass-card">
+              <div class="card-header">
+                <div class="card-title-group">
+                  <span class="card-title-icon">📉</span>
+                  <div>
+                    <h2 class="card-title">Weight Progression Trend</h2>
+                    <p class="card-subtitle">Real-time tracking towards your goal</p>
+                  </div>
+                </div>
+                
+                <div class="chart-header-controls">
+                  <button class="chart-filter-pill active" data-range="7d">7D</button>
+                  <button class="chart-filter-pill" data-range="30d">30D</button>
+                  <button class="chart-filter-pill" data-range="all">All</button>
+                </div>
+              </div>
+
+              <div class="chart-container-box">
+                <canvas id="weightTrendChart"></canvas>
+              </div>
+
+              <!-- Secondary Row: Dual Charts (Calories Burned & Workout Distribution) -->
+              <div class="charts-dual-row" style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border-subtle);">
+                <div>
+                  <h3 style="font-size: 0.95rem; margin-bottom: 0.75rem; color: #fff;">🔥 Calories Burned</h3>
+                  <div style="height: 190px;">
+                    <canvas id="calorieBurnChart"></canvas>
+                  </div>
+                </div>
+                <div>
+                  <h3 style="font-size: 0.95rem; margin-bottom: 0.75rem; color: #fff;">📊 Workout Type Breakdown</h3>
+                  <div style="height: 190px;">
+                    <canvas id="workoutDistributionChart"></canvas>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </section>
+
+        <!-- ===============================================================
+             VIEW 2: Analytics & Progress View
+             =============================================================== -->
+        <section id="analyticsView" class="view-section" style="display: none;">
+          <div class="glass-card">
+            <div class="card-header">
+              <div class="card-title-group">
+                <span class="card-title-icon">📊</span>
+                <div>
+                  <h2 class="card-title">Detailed Performance Analytics</h2>
+                  <p class="card-subtitle">Comprehensive breakdown of your fitness journey</p>
+                </div>
+              </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+              <div style="background: rgba(0,0,0,0.2); padding: 1.25rem; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
+                <div style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 0.35rem;">TARGET WEIGHT PROGRESS</div>
+                <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.6rem;">
+                  <span style="font-size: 1.8rem; font-weight: 700; color: #fff;">60.0 <span style="font-size: 1rem; color: var(--text-muted);">/ 65 kg</span></span>
+                  <span style="color: var(--accent-cyan); font-weight: 600;">80%</span>
+                </div>
+                <div style="height: 8px; background: rgba(255,255,255,0.08); border-radius: 4px; overflow: hidden;">
+                  <div style="width: 80%; height: 100%; background: linear-gradient(90deg, #00f0ff, #3b82f6);"></div>
+                </div>
+              </div>
+
+              <div style="background: rgba(0,0,0,0.2); padding: 1.25rem; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
+                <div style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 0.35rem;">AVERAGE CALORIES / SESSION</div>
+                <div style="font-size: 1.8rem; font-weight: 700; color: #fff; margin-bottom: 0.3rem;">1,441 <span style="font-size: 1rem; color: var(--text-muted);">kcal</span></div>
+                <div style="color: var(--accent-emerald); font-size: 0.8rem;">High intensity consistency</div>
+              </div>
+
+              <div style="background: rgba(0,0,0,0.2); padding: 1.25rem; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
+                <div style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 0.35rem;">FAVORITE EXERCISE</div>
+                <div style="font-size: 1.8rem; font-weight: 700; color: #fff; margin-bottom: 0.3rem;">Strength Training</div>
+                <div style="color: var(--accent-cyan); font-size: 0.8rem;">87.5% of sessions</div>
+              </div>
+            </div>
+
+            <div style="padding: 1.5rem; background: rgba(0, 240, 255, 0.03); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg);">
+              <h3 style="color: #fff; font-size: 1.1rem; margin-bottom: 0.5rem;">💡 Coach Insights & Recommendations</h3>
+              <p style="color: var(--text-secondary); font-size: 0.92rem; line-height: 1.6;">
+                Based on your logged workouts and your goal of <strong style="color: var(--accent-cyan);">Weight Gain (Muscle Gain)</strong>, your progressive overload is showing steady results! Ensure you are pairing your strength sessions with sufficient protein intake (1.6 - 2.0g per kg of body weight) and getting 7-8 hours of sleep for optimum recovery.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <!-- ===============================================================
+             VIEW 3: Workout History Table & Data Manager
+             =============================================================== -->
+        <section id="historyView" class="view-section" style="display: none;">
+          <div class="glass-card">
+            <div class="card-header" style="flex-wrap: wrap; gap: 1rem;">
+              <div class="card-title-group">
+                <span class="card-title-icon">📋</span>
+                <div>
+                  <h2 class="card-title">Workout History & Records</h2>
+                  <p class="card-subtitle">Search, filter, or export your logged entries</p>
+                </div>
+              </div>
+
+              <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                <input type="text" id="historySearch" class="form-control" style="width: 200px; padding: 0.45rem 0.8rem; font-size: 0.85rem;" placeholder="Search exercise...">
+                <button id="exportWorkoutsBtn" class="btn btn-secondary btn-sm" title="Export workouts to CSV">
+                  📥 Workouts CSV
+                </button>
+                <button id="exportWeightsBtn" class="btn btn-secondary btn-sm" title="Export weight log to CSV">
+                  📥 Weights CSV
+                </button>
+                <button id="importCSVBtn" class="btn btn-outline btn-sm">
+                  📤 Import CSV
+                </button>
+                <input type="file" id="csvFileInput" accept=".csv" style="display: none;">
+              </div>
+            </div>
+
+            <div class="table-responsive">
+              <table class="modern-table">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Exercise</th>
+                    <th>Duration</th>
+                    <th>Calories</th>
+                    <th style="width: 50px;">Action</th>
+                  </tr>
+                </thead>
+                <tbody id="historyTableBody">
+                  <!-- Generated dynamically via app.js -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ===============================================================
+             VIEW 4: Fitness Tools (BMI & Water Tracker)
+             =============================================================== -->
+        <section id="toolsView" class="view-section" style="display: none;">
+          <div class="dashboard-grid">
+            
+            <!-- BMI Calculator Tool -->
+            <div class="glass-card">
+              <div class="card-header">
+                <div class="card-title-group">
+                  <span class="card-title-icon">🧮</span>
+                  <div>
+                    <h2 class="card-title">Smart BMI Calculator</h2>
+                    <p class="card-subtitle">Calculate your Body Mass Index and health category</p>
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label" for="bmiHeight">Height (cm)</label>
+                  <input type="number" id="bmiHeight" class="form-control" placeholder="e.g. 175" value="175">
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="bmiWeight">Weight (kg)</label>
+                  <input type="number" id="bmiWeight" class="form-control" placeholder="e.g. 68" value="60">
+                </div>
+              </div>
+
+              <button type="button" id="calcBmiBtn" class="btn btn-primary" style="width: 100%; margin-top: 0.5rem;">
+                Calculate BMI
+              </button>
+
+              <div class="bmi-gauge-container">
+                <div style="display: flex; justify-content: space-between; align-items: baseline;">
+                  <span style="font-size: 0.85rem; color: var(--text-secondary);">YOUR SCORE:</span>
+                  <span id="bmiScore" style="font-size: 2rem; font-weight: 800; font-family: var(--font-mono); color: #fff;">19.6</span>
+                </div>
+                <div id="bmiCategory" style="font-size: 0.95rem; font-weight: 700; color: #34d399; margin-top: 0.2rem;">
+                  Healthy / Normal Weight
+                </div>
+
+                <div class="bmi-bar">
+                  <div id="bmiMarker" class="bmi-marker" style="left: 45%;"></div>
+                </div>
+                <div class="bmi-labels">
+                  <span>Under (&lt;18.5)</span>
+                  <span>Normal (18.5-24.9)</span>
+                  <span>Over (25-29.9)</span>
+                  <span>Obese (30+)</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Daily Hydration Tracker -->
+            <div class="glass-card">
+              <div class="card-header">
+                <div class="card-title-group">
+                  <span class="card-title-icon">💧</span>
+                  <div>
+                    <h2 class="card-title">Daily Hydration Tracker</h2>
+                    <p class="card-subtitle">Track your recommended 2,000ml water intake</p>
+                  </div>
+                </div>
+              </div>
+
+              <div style="text-align: center; padding: 1rem 0;">
+                <div id="waterProgressText" style="font-size: 1.8rem; font-weight: 800; font-family: var(--font-mono); color: var(--accent-cyan); margin-bottom: 1.25rem;">
+                  0 ml / 2,000 ml
+                </div>
+
+                <div id="waterGlassesContainer" style="display: flex; justify-content: center; gap: 0.8rem; flex-wrap: wrap; margin-bottom: 1.5rem;">
+                  <!-- 8 glasses rendered dynamically -->
+                </div>
+
+                <div style="display: flex; justify-content: center; gap: 0.75rem;">
+                  <button id="addWaterBtn" class="btn btn-primary btn-sm">
+                    + Add Glass (250ml)
+                  </button>
+                  <button id="resetWaterBtn" class="btn btn-secondary btn-sm">
+                    Reset Daily
+                  </button>
+                </div>
+              </div>
+
+              <div style="margin-top: 1.5rem; padding: 1rem; background: rgba(0,0,0,0.2); border-radius: var(--radius-md); font-size: 0.82rem; color: var(--text-secondary); line-height: 1.5;">
+                💡 <strong>Hydration Tip:</strong> Drinking adequate water throughout the day improves metabolic rate, muscle recovery, and workout endurance.
+              </div>
+            </div>
+
+          </div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- =====================================================================
+       3. Mobile Bottom Navigation
+       ===================================================================== -->
+  <nav class="mobile-bottom-nav">
+    <a class="mobile-nav-item active" data-nav-view="dashboardView">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+      <span>Dashboard</span>
+    </a>
+    <a class="mobile-nav-item" data-nav-view="analyticsView">
+      <svg viewBox="0 0 24 24" fill="none"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+      <span>Analytics</span>
+    </a>
+    <a class="mobile-nav-item" data-nav-view="historyView">
+      <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+      <span>History</span>
+    </a>
+    <a class="mobile-nav-item" data-nav-view="toolsView">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>
+      <span>Tools</span>
+    </a>
+  </nav>
+
+  <!-- =====================================================================
+       4. Modal: Profile & Goal Configuration
+       ===================================================================== -->
+  <div id="goalModal" class="modal-overlay">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 class="modal-title"><span>🎯</span> Profile & Fitness Goals</h3>
+        <button class="modal-close-btn" onclick="closeModal('goalModal')">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label" for="modalUsername">Your Name</label>
+          <input type="text" id="modalUsername" class="form-control" value="Alex Walker">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="modalGoalSelect">Primary Fitness Goal</label>
+          <select id="modalGoalSelect" class="form-control">
+            <option value="Weight Gain">Weight Gain</option>
+            <option value="Weight Loss">Weight Loss</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="modalSubgoalSelect">Focus Category</label>
+          <select id="modalSubgoalSelect" class="form-control">
+            <!-- Dynamically populated -->
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="modalTargetWeight">Target Weight (kg)</label>
+          <input type="number" id="modalTargetWeight" class="form-control" step="0.5" value="65.0">
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary btn-sm" onclick="closeModal('goalModal')">Cancel</button>
+        <button id="saveGoalBtn" class="btn btn-primary btn-sm">Save Preferences</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- FitGraph Application Logic -->
+  <script src="js/app.js"></script>
+</body>
+</html>
